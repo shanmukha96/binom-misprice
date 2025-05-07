@@ -36,7 +36,7 @@ pip install --upgrade pip setuptools wheel
 pip install binom-misprice
 
 # or install editable from source (including dev extras)
-git clone https://github.com/youruser/binom_misprice.git
+git clone https://github.com/shanmukha96/binom-misprice.git
 cd binom_misprice
 pip install -e .[dev]
 ````
@@ -261,7 +261,7 @@ dfcomp <- compute_composite_mispricing(
 
 [![PyPI version](https://badge.fury.io/py/binom-misprice.svg)](https://pypi.org/project/binom-misprice/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://github.com/youruser/binom_misprice/actions/workflows/ci.yml/badge.svg)](https://github.com/youruser/binom_misprice/actions)
+[![Build Status](https://github.com/shanmukha96/binom-misprice/actions/workflows/ci.yml/badge.svg)](https://github.com/shanmukha96/binom-misprice/actions)
 
 **binom_misprice** is a production‑grade Python package for detecting option mispricing using:
 - **Binomial‑tree** (CRR) pricer with **American**‑put support  
@@ -279,7 +279,7 @@ dfcomp <- compute_composite_mispricing(
 pip install binom-misprice
 
 # from source (with dev/test extras)
-git clone https://github.com/youruser/binom_misprice.git
+git clone https://github.com/shanmukha96/binom-misprice.git
 cd binom_misprice
 pip install -e .[dev]
 ````

@@ -160,7 +160,12 @@ df_batch = bm.compute_mispricing_batch(
     output_path="batch_call_mispricing.csv"
 )
 ```
-
+# american and implied volatility
+df = bm.compute_call_mispricing(
+  symbol="AAPL", expiry="2025-12-19",
+  steps=3, american=True,
+  implied_vols=my_iv_array
+)
 ---
 
 ## 4. Command‑Line Interface

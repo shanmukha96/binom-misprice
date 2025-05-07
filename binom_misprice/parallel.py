@@ -22,8 +22,10 @@ def _mispricing_worker(
         )
         df["symbol"] = symbol
         return df
-    except Exception:
-        return None
+    except Exception as e:
+            import warnings
+            warnings.warn(f"{symbol}: {e}")
+            return None
 
 def compute_mispricing_batch(
     tickers,

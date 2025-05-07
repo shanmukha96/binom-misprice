@@ -9,11 +9,11 @@ setup(
     name="binom_misprice",
     version="0.1.0",
     author="Shanmukha Sai Katlaparthi",
-    author_email="youremail@example.com",  # ← your email
+    author_email="skatlapa@stevens.edu",
     description="Vectorized binomial-tree option mispricing with parallel processing",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/shanmukha96/binom_misprice",  # ← your real repo
+    url="https://github.com/shanmukha96/binom-misprice",
     packages=find_packages(exclude=["tests", "docs"]),
     python_requires=">=3.8",
     install_requires=[
@@ -24,7 +24,7 @@ setup(
     extras_require={
         "dev": [
             "pytest",
-            "requests-cache",  # if you plan to use the caching example
+            "requests-cache", 
         ]
     },
     entry_points={

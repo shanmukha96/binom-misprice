@@ -8,7 +8,7 @@
 pip install binom-misprice
 
 # From the latest source
-git clone https://github.com/shanmukha96/binom_misprice.git
+git clone https://github.com/shanmukha96/binom-misprice.git
 cd binom_misprice
 pip install -e .
 ````

@@ -25,6 +25,7 @@ setup(
         "dev": [
             "pytest",
             "requests-cache", 
+            "setuptools"
         ]
     },
     entry_points={

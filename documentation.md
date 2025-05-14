@@ -1,9 +1,4 @@
-Thought for a couple of seconds
-
-
-Below are the two complete markdown documents. Just copy each block into your `documentation.md` and `README.md` files respectively.
-
----
+Here’s an expanded **documentation.md** with detailed parameter lists (and `null`/`None` allowed to use defaults) for each Python API function. Copy this entire block into your `documentation.md`.
 
 ````markdown
 # binom_misprice — Usage Documentation
@@ -32,9 +27,6 @@ source .venv/bin/activate    # Windows PowerShell: .venv\Scripts\Activate.ps1
 # 2. Upgrade pip & packaging tools
 pip install --upgrade pip setuptools wheel
 
-# 3. Install from PyPI
-pip install binom-misprice
-
 # or install editable from source (including dev extras)
 git clone https://github.com/shanmukha96/binom-misprice.git
 cd binom_misprice
@@ -48,124 +40,188 @@ pip install -e .[dev]
 install.packages(c("reticulate","dplyr"))
 
 # 2. Create an R virtualenv and install Python package into it
-reticulate::virtualenv_create("binom_env", python = "python3")
-reticulate::virtualenv_install("binom_env", packages = "binom-misprice", pip = TRUE)
+reticulate::virtualenv_create("binom_misprice_env", python = "python3")
+reticulate::virtualenv_install("binom_misprice_env", packages = "binom_misprice", pip = TRUE)
 ```
 
 ---
 
 ## 3. Python API
 
-Import the top‑level module:
+Import the package:
 
 ```python
 import binom_misprice as bm
 ```
 
-### 3.1 Pricing Models
+### 3.1 Pricing Primitives
+
+#### `binomial_tree_price`
 
 ```python
-# Binomial tree (American or European)
-prices = bm.binomial_tree_price(
-    S=100,
-    strikes=[90,100,110],
-    T=30/252,
-    r=0.01,
-    sigma=0.2,
-    steps=3,
-    opt_type='c',
-    american=True
-)
-
-# Black‑Scholes (European, with dividends q=0.0 by default)
-bs_price = bm.black_scholes_price(
-    S=100,
-    K=100,
-    T=30/252,
-    r=0.01,
-    sigma=0.2,
-    option_type='c'
-)
+bm.binomial_tree_price(
+    S: float,
+    strikes: List[float],
+    T: float,
+    r: float,
+    sigma: Optional[float] = None,
+    steps: int = 50,
+    opt_type: str = 'c',
+    american: bool = True,
+    q: float = 0.0
+) -> pd.DataFrame
 ```
+
+* **S** (`float`): Underlying spot price.
+* **strikes** (`List[float]`): One or more strike prices.
+* **T** (`float`): Time to expiry in years.
+* **r** (`float`): Continuously‑compounded risk‑free rate.
+* **sigma** (`float` or `None`): Volatility.
+
+  * `None` (default): fetch per‑strike IV; fallback to 60‑day hist‑vol if missing.
+  * `>0`: override all strikes with this flat volatility.
+* **steps** (`int`): Number of binomial steps (higher → smoother tree).
+* **opt\_type** (`'c'` or `'p'`): `'c'`=call, `'p'`=put.
+* **american** (`bool`): Early‑exercise enabled if `True`.
+* **q** (`float`): Continuous dividend yield.
+
+Returns a DataFrame indexed by strike (and date if vectorized) of theoretical prices.
+
+#### `black_scholes_price`
+
+```python
+bm.black_scholes_price(
+    S: float,
+    K: float,
+    T: float,
+    r: float,
+    sigma: Optional[float] = None,
+    option_type: str = 'c',
+    q: float = 0.0
+) -> float
+```
+
+* **S** (`float`): Spot price.
+* **K** (`float`): Strike price.
+* **T** (`float`): Time to expiry in years.
+* **r** (`float`): Risk‑free rate.
+* **sigma** (`float` or `None`): Volatility (same logic as above).
+* **option\_type** (`'c'` or `'p'`): Call or put.
+* **q** (`float`): Dividend yield.
+
+Returns a single Black–Scholes price (European only).
+
+---
 
 ### 3.2 Mispricing Factors
 
-```python
-# 1) Call mispricing for one expiry, default IV fetch & fallback
-df_call = bm.compute_call_mispricing(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    steps=2,
-    american=True
-)
-
-# 2) Put mispricing with flat sigma override (25%)
-df_put = bm.compute_put_mispricing(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    sigma=0.25,
-    steps=2,
-    american=False
-)
-
-# 3) Call mispricing injecting your own per-strike IV array
-my_ivs = [...]  # numpy array aligned to the strikes
-df_call_iv = bm.compute_call_mispricing(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    steps=2,
-    american=True,
-    implied_vols=my_ivs
-)
-
-# 4) Composite mispricing (60% call + 40% put)
-df_comp = bm.compute_composite_mispricing(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    w_call=0.6,
-    w_put=0.4,
-    steps=2,
-    american=True
-)
-```
-
-### 3.3 Date‐Range Scanning
+#### `compute_call_mispricing`
 
 ```python
-df_range = bm.compute_mispricing_range(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    start_date="2025-11-01",
-    end_date="2025-11-05",
-    factor="composite",     # 'call', 'put', or 'composite'
-    steps=3,
-    american=True,
-    output_path="mispricing_range.csv"
-)
+bm.compute_call_mispricing(
+    symbol: str,
+    expiry: str,
+    sigma: Optional[float] = None,
+    r: float = 0.0,
+    steps: int = 50,
+    american: bool = True,
+    implied_vols: Optional[Sequence[float]] = None,
+    valuation_date: Optional[str] = None
+) -> pd.DataFrame
 ```
 
-### 3.4 Parallel Batch for Multiple Tickers
+* **symbol** (`str`): Ticker symbol (e.g. `"AAPL"`).
+* **expiry** (`str`): Expiry date `"YYYY-MM-DD"`.
+* **sigma** (`float` or `None`): Flat vol override; `None` triggers IV fetch + fallback.
+* **r** (`float`): Risk‑free rate.
+* **steps** (`int`): Binomial steps.
+* **american** (`bool`): Early‑exercise if `True`.
+* **implied\_vols** (`Sequence[float]` or `None`): User‑supplied IV array (highest precedence).
+* **valuation\_date** (`str` or `None`): Pricing date (`None` = today).
+
+Returns per‑strike call mispricing DataFrame.
+
+#### `compute_put_mispricing`
 
 ```python
-symbols = ["AAPL","MSFT","GOOG"]
-df_batch = bm.compute_mispricing_batch(
-    tickers=symbols,
-    expiry="2025-12-19",
-    start_date="2025-11-01",
-    end_date="2025-11-05",
-    factor="call",
-    steps=3,
-    american=False,
-    max_workers=4,
-    output_path="batch_call_mispricing.csv"
-)
+# Same signature as compute_call_mispricing
+bm.compute_put_mispricing(...)
 ```
-# american and implied volatility
-df = bm.compute_call_mispricing(
-  symbol="AAPL", expiry="2025-12-19",
-  steps=3, american=True,
-  implied_vols=my_iv_array
-)
+
+Identical parameters but computes put mispricing.
+
+#### `compute_composite_mispricing`
+
+```python
+bm.compute_composite_mispricing(
+    symbol: str,
+    expiry: str,
+    w_call: float,
+    w_put: float,
+    sigma: Optional[float] = None,
+    r: float = 0.0,
+    steps: int = 50,
+    american: bool = True,
+    implied_vols: Optional[Sequence[float]] = None,
+    valuation_date: Optional[str] = None
+) -> pd.DataFrame
+```
+
+* **w\_call**, **w\_put** (`float`): Weights for call and put mispricing (sum to 1).
+  Other params as above.
+
+---
+
+### 3.3 Date‑Range Scanning
+
+#### `compute_mispricing_range`
+
+```python
+bm.compute_mispricing_range(
+    symbol: str,
+    expiry: str,
+    start_date: str,
+    end_date: str,
+    factor: str = 'call',
+    sigma: Optional[float] = None,
+    r: float = 0.0,
+    steps: int = 50,
+    american: bool = True,
+    implied_vols: Optional[Sequence[float]] = None,
+    output_path: Optional[str] = None
+) -> pd.DataFrame
+```
+
+* **start\_date**, **end\_date** (`str`): `"YYYY-MM-DD"` range.
+* **factor** (`'call'`, `'put'`, `'composite'`).
+* **output\_path** (`str` or `None`): CSV file to save results.
+
+---
+
+### 3.4 Parallel Batch Processing
+
+#### `compute_mispricing_batch`
+
+```python
+bm.compute_mispricing_batch(
+    tickers: Sequence[str],
+    expiry: str,
+    start_date: str,
+    end_date: str,
+    factor: str = 'call',
+    sigma: Optional[float] = None,
+    r: float = 0.0,
+    steps: int = 50,
+    american: bool = True,
+    implied_vols: Optional[Sequence[float]] = None,
+    max_workers: int = 4,
+    output_path: Optional[str] = None
+) -> pd.DataFrame
+```
+
+* **tickers** (`Sequence[str]`): List of symbols.
+* **max\_workers** (`int`): Threads for parallel execution.
+
 ---
 
 ## 4. Command‑Line Interface
@@ -182,6 +238,8 @@ binom-misprice \
   --output out.csv
 ```
 
+All the same Python‑API parameters can be passed as flags; omit any to let the system choose defaults.
+
 ---
 
 ## 5. R API (via reticulate)
@@ -189,33 +247,15 @@ binom-misprice \
 ```r
 library(reticulate)
 use_virtualenv("binom_env", required = TRUE)
-library(binommisprice)    # or your R package name
+library(binommisprice)
 
 # Call mispricing
 dfc <- compute_call_mispricing(
   symbol = "AAPL",
   expiry = "2025-12-19",
   steps = 2L,
-  american = TRUE
-)
-
-# Put mispricing with sigma override
-dfp <- compute_put_mispricing(
-  symbol = "AAPL",
-  expiry = "2025-12-19",
-  sigma = 0.25,
-  steps = 2L,
-  american = FALSE
-)
-
-# Composite mispricing
-dfcomp <- compute_composite_mispricing(
-  symbol = "AAPL",
-  expiry = "2025-12-19",
-  w_call = 0.6,
-  w_put  = 0.4,
-  steps  = 2L,
-  american= TRUE
+  american = TRUE,
+  sigma = NULL         # letting Python fetch IV + fallback
 )
 ```
 
@@ -223,135 +263,23 @@ dfcomp <- compute_composite_mispricing(
 
 ## 6. Notes & Tips
 
-* **American vs European**
-
-  * Set `american=True` for early‑exercise in binomial trees.
-  * `black_scholes_price()` is always European.
+* **Passing `None`/`null`**
+  Any parameter marked optional can be set to `None` (Python) or `NULL` (R) to invoke built‑in defaults—e.g. fetching IVs or using today’s date.
 
 * **Volatility Input**
 
-  * `sigma=None` (default) → per‑strike IV from `yfinance`, fallback to 60‑day historical vol.
-  * `sigma=<float>` → override all strikes.
-  * `implied_vols=<array>` → user‑supplied per‑strike array (takes highest precedence).
+  1. `implied_vols` array overrides everything
+  2. `sigma=float` sets flat vol
+  3. `sigma=None` → per‑strike IV + 60‑day hist‑vol fallback
 
-* **IV Fallbacks**
+* **Error Handling & Warnings**
 
-  * If `yfinance`’s implied‑vol column is missing or zero, you’ll get a single `UserWarning` listing the affected strikes and the 60‑day hist‑vol used instead.
-
-* **Error Handling**
-
-  * Invalid symbol or expiry → `ValueError` (Python) / `stop()` (R).
-  * Empty chains, expired options, or non‑positive theoretical prices are filtered or error out gracefully.
+  * Missing IV → single warning listing strikes using historical vol.
+  * Invalid inputs → `ValueError` / `stop()`
 
 * **Performance**
 
-  * Vectorized pricing over strikes & parallel batch processing for multi‑ticker scans.
-  * Example caching shown in docs (via `functools.lru_cache`) to reduce repeated data requests.
+  * Increase `steps` for smoother trees.
+  * Use `max_workers` for faster multi‑ticker runs
 
 ---
-
-*End of documentation.md*
-
-````
-
----
-
-```markdown
-# binom_misprice
-
-[![PyPI version](https://badge.fury.io/py/binom-misprice.svg)](https://pypi.org/project/binom-misprice/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://github.com/shanmukha96/binom-misprice/actions/workflows/ci.yml/badge.svg)](https://github.com/shanmukha96/binom-misprice/actions)
-
-**binom_misprice** is a production‑grade Python package for detecting option mispricing using:
-- **Binomial‑tree** (CRR) pricer with **American**‑put support  
-- **Black‑Scholes** analytic pricer with continuous dividends  
-- **Per‑strike implied‑vol** integration (with 60‑day hist‑vol fallback & warnings)  
-- **Composite signals**, **date‑range scans**, **parallel batch** processing  
-- **R interface** via **reticulate** and optional **CLI**  
-
----
-
-## Installation
-
-```bash
-# Latest from PyPI
-pip install binom-misprice
-
-# from source (with dev/test extras)
-git clone https://github.com/shanmukha96/binom-misprice.git
-cd binom_misprice
-pip install -e .[dev]
-````
-
----
-
-## Quickstart
-
-```python
-import binom_misprice as bm
-
-# Compute call mispricing for AAPL expiring 2025‑12‑19 using 3‑step American tree
-df = bm.compute_call_mispricing(
-    symbol="AAPL",
-    expiry="2025-12-19",
-    steps=3,
-    american=True
-)
-
-print(df.head())
-```
-
----
-
-## Core API
-
-```python
-# Pricing
-bm.binomial_tree_price(S, strikes, T, r, sigma, steps, opt_type, american, q)
-bm.black_scholes_price(S, K, T, r, sigma, option_type, q)
-
-# Mispricing Factors
-bm.compute_call_mispricing(symbol, expiry, sigma=None, r=0.03,
-                           steps=2, american=False, implied_vols=None)
-
-bm.compute_put_mispricing(...)
-
-bm.compute_composite_mispricing(...)
-
-# Range & Batch
-bm.compute_mispricing_range(...)
-bm.compute_mispricing_batch(...)
-```
-
----
-
-## Command‑Line Interface
-
-```bash
-binom-misprice --symbol AAPL \
-               --expiry 2025-12-19 \
-               --factor composite \
-               --steps 3 \
-               --american \
-               --output mispricings.csv
-```
-
----
-
-## License
-
-This project is licensed under the **MIT License**. See the `LICENSE` file for details.
-
----
-
-## Contributing
-
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/foo`)
-3. Commit your changes (`git commit -am 'Add foo'`)
-4. Push to the branch (`git push origin feature/foo`)
-5. Open a Pull Request
-
-Please ensure all tests pass (`pytest`) and follow PEP 8 styling.
-

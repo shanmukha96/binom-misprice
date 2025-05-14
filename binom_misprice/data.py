@@ -44,7 +44,7 @@ def fetch_option_chain(symbol: str, expiry: str):
 
     # 5) Grab the last 7 calendar days of history, drop tz info
     try:
-        hist = tk.history(period="7d")
+        hist = tk.history(period="30d")
     except Exception as e:
         raise ValueError(f"No price history for {symbol}: {e}")
     if hist.empty or "Close" not in hist.columns:
